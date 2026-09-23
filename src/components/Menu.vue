@@ -42,7 +42,7 @@ const items = computed(() => [
         ? [{
             label: 'User Status',
             icon: 'pi pi-user-plus',
-            route: '/superadmin/archived-users',
+            route: '/superadmin/user-management',
           }]
         : []),
       ...(auth.user?.role === 'superadmin'

@@ -34,12 +34,12 @@ export async function fetchPendingUsers() {
 }
 
 export async function fetchActiveUsers() {
-  const { data } = await api.get('/api/admin/users')
+  const { data } = await api.get('/api/admin/user-management')
   return data
 }
 
 export async function fetchArchivedUsers() {
-  const { data } = await api.get('/api/admin/archived-users')
+  const { data } = await api.get('/api/admin/user-management/archived')
   return data
 }
 
@@ -52,13 +52,13 @@ export async function rejectUser(id, reason = '') {
 }
 
 export async function suspendUser(id, reason) {
-  return post(`/api/admin/users/${id}/suspend`, { reason })
+  return post(`/api/admin/user-management/${id}/suspend`, { reason })
 }
 
 export async function reactivateUser(id) {
-  return post(`/api/admin/users/${id}/reactivate`)
+  return post(`/api/admin/user-management/${id}/reactivate`)
 }
 
 export async function terminateUser(id, reason) {
-  return post(`/api/admin/users/${id}/terminate`, { reason })
+  return post(`/api/admin/user-management/${id}/terminate`, { reason })
 }

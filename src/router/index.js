@@ -30,8 +30,8 @@ const routes = [
         meta: { roles: ['superadmin'] },
       },
       {
-        path: 'superadmin/archived-users',
-        name: 'archived-users',
+        path: 'superadmin/user-management',
+        name: 'user-management',
         component: () => import('@/views/SuperAdmin/UserManagement.vue'),
         meta: { roles: ['superadmin'] },
       },

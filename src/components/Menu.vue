@@ -37,7 +37,7 @@ const items = computed(() => [
       },
        {
         label: 'Devices',
-        icon: 'pi pi-mobile',
+        icon: 'pi pi-desktop',
         route: '/devices',
       },
       ...(auth.user?.role === 'superadmin'

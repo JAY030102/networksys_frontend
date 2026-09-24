@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { fetchSelections, createSelection, updateSelection, deleteSelection,
          fetchModels, createModel, updateModel, deleteModel,} from '@/lib/deviceSelection'
 import Card from 'primevue/card'
@@ -13,8 +13,9 @@ import { useConfirm } from 'primevue/useconfirm'
 import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
+import ColorPicker from '@/components/ColorPicker.vue'
 
-
+const colorPick = ref(null)
 const categories = ref([])
 const statuses = ref([])
 const manufacturers = ref([])
@@ -70,38 +71,49 @@ function confirmDelete(type, id, label = 'this item') {
 }
 
 function openCreate(type) {
-dialogType.value = type
-dialogTitle.value = `Add ${typeMap[type].label}`
-editingId.value = null
-nameInput.value = ''
-dialog.value = true
+  dialogType.value = type
+  dialogTitle.value = `Add ${typeMap[type].label}`
+  editingId.value = null
+  nameInput.value = ''
+  colorPick.value = null
+  dialog.value = true
 }
 
 function openEdit(type, row) {
-dialogType.value = type
-dialogTitle.value = `Edit ${typeMap[type].label}`
-editingId.value = row.id
-nameInput.value = row.name
-dialog.value = true
+  dialogType.value = type
+  dialogTitle.value = `Edit ${typeMap[type].label}`
+  editingId.value = row.id
+  nameInput.value = row.name
+  colorPick.value = row.color
+  dialog.value = true
 }
 
 function openCreateModel() {
-dialogType.value = 'models'
-dialogTitle.value = 'Add Model'
-editingId.value = null
-nameInput.value = ''
-modelManufacturerId.value = null
-dialog.value = true
+  dialogType.value = 'models'
+  dialogTitle.value = 'Add Model'
+  editingId.value = null
+  nameInput.value = ''
+  modelManufacturerId.value = null
+  colorPick.value = null
+  dialog.value = true
 }
 
 function openEditModel(row) {
-dialogType.value = 'models'
-dialogTitle.value = 'Edit Model'
-editingId.value = row.id
-nameInput.value = row.name
-modelManufacturerId.value = row.manufacturer_id
-dialog.value = true
+  dialogType.value = 'models'
+  dialogTitle.value = 'Edit Model'
+  editingId.value = row.id
+  nameInput.value = row.name
+  modelManufacturerId.value = row.manufacturer_id
+  colorPick.value = row.color
+  dialog.value = true
 }
+
+const usedColors = computed(() => [
+  ...categories.value.map(c => ({ name: c.name, color: c.color, type: 'Category' })),
+  ...statuses.value.map(s => ({ name: s.name, color: s.color, type: 'Status' })),
+  ...manufacturers.value.map(m => ({ name: m.name, color: m.color, type: 'Manufacturer' })),
+  ...models.value.map(m => ({ name: m.name, color: m.color, type: 'Model' })),
+])
 
 async function saveDialog() {
   error.value = ''
@@ -111,17 +123,17 @@ async function saveDialog() {
     if (dialogType.value === 'models') {
       if (!modelManufacturerId.value || !nameInput.value.trim()) return
       if (isEditing) {
-        await updateModel(editingId.value, modelManufacturerId.value, nameInput.value)
+        await updateModel(editingId.value, modelManufacturerId.value, nameInput.value, colorPick.value)
       } else {
-        await createModel(modelManufacturerId.value, nameInput.value)
+        await createModel(modelManufacturerId.value, nameInput.value, colorPick.value)
       }
       models.value = await fetchModels()
     } else {
       if (!nameInput.value.trim()) return
       if (isEditing) {
-        await updateSelection(dialogType.value, editingId.value, nameInput.value)
+        await updateSelection(dialogType.value, editingId.value, nameInput.value, colorPick.value)
       } else {
-        await createSelection(dialogType.value, nameInput.value)
+        await createSelection(dialogType.value, nameInput.value, colorPick.value)
       }
       typeMap[dialogType.value].list.value = await fetchSelections(dialogType.value)
     }
@@ -138,13 +150,7 @@ async function saveDialog() {
     error.value = e.response?.data?.message
       || Object.values(e.response?.data?.errors || {}).flat().join(' ')
       || 'Save failed'
-
-    toast.add({
-      severity: 'error',
-      summary: 'Error',
-      detail: error.value,
-      life: 4000,
-    })
+    toast.add({ severity: 'error', summary: 'Error', detail: error.value, life: 4000 })
   }
 }
 
@@ -182,16 +188,21 @@ onMounted(loadAll)
     </template>
     <template #content>
         <DataTable :value="categories" :loading="loading.categories" paginator :rows="5" dataKey="id" stripedRows>
-        <template #empty><p class="text-gray-500 text-center py-4">No categories yet.</p></template>
-        <Column field="name" header="Name" />
-        <Column header="Actions" style="width: 8rem">
+          <template #empty><p class="text-gray-500 text-center py-4">No categories yet.</p></template>
+          <Column field="name" header="Name" />
+          <Column header="Color" style="width: 5rem">
             <template #body="{ data }">
-            <div class="flex gap-2">
+              <div v-if="data.color" class="w-6 h-6 rounded-full border" :style="{ backgroundColor: '#' + data.color }" />
+            </template>
+          </Column>
+          <Column header="Actions" style="width: 8rem">
+            <template #body="{ data }">
+              <div class="flex gap-2">
                 <Button icon="pi pi-pencil" size="small" text @click="openEdit('categories', data)" />
                 <Button icon="pi pi-trash" size="small" text severity="danger" @click="confirmDelete('categories', data.id, data.name)" />
-            </div>
+              </div>
             </template>
-        </Column>
+          </Column>
         </DataTable>
     </template>
     </Card>
@@ -205,18 +216,23 @@ onMounted(loadAll)
         </div>
     </template>
     <template #content>
-        <DataTable :value="statuses" :loading="loading.statuses" paginator :rows="5" dataKey="id" stripedRows>
+      <DataTable :value="statuses" :loading="loading.statuses" paginator :rows="5" dataKey="id" stripedRows>
         <template #empty><p class="text-gray-500 text-center py-4">No statuses yet.</p></template>
         <Column field="name" header="Name" />
-        <Column header="Actions" style="width: 8rem">
-            <template #body="{ data }">
-            <div class="flex gap-2">
-                <Button icon="pi pi-pencil" size="small" text @click="openEdit('statuses', data)" />
-                <Button icon="pi pi-trash" size="small" text severity="danger" @click="confirmDelete('statuses', data.id, data.name)" />
-            </div>
-            </template>
+        <Column header="Color" style="width: 5rem">
+          <template #body="{ data }">
+            <div v-if="data.color" class="w-6 h-6 rounded-full border" :style="{ backgroundColor: '#' + data.color }" />
+          </template>
         </Column>
-        </DataTable>
+        <Column header="Actions" style="width: 8rem">
+          <template #body="{ data }">
+            <div class="flex gap-2">
+              <Button icon="pi pi-pencil" size="small" text @click="openEdit('statuses', data)" />
+              <Button icon="pi pi-trash" size="small" text severity="danger" @click="confirmDelete('statuses', data.id, data.name)" />
+            </div>
+          </template>
+        </Column>
+      </DataTable>
     </template>
     </Card>
 
@@ -230,16 +246,21 @@ onMounted(loadAll)
     </template>
     <template #content>
         <DataTable :value="manufacturers" :loading="loading.manufacturers" paginator :rows="5" dataKey="id" stripedRows>
-        <template #empty><p class="text-gray-500 text-center py-4">No manufacturers yet.</p></template>
-        <Column field="name" header="Name" />
-        <Column header="Actions" style="width: 8rem">
+          <template #empty><p class="text-gray-500 text-center py-4">No manufacturers yet.</p></template>
+          <Column field="name" header="Name" />
+          <Column header="Color" style="width: 5rem">
             <template #body="{ data }">
-            <div class="flex gap-2">
+              <div v-if="data.color" class="w-6 h-6 rounded-full border" :style="{ backgroundColor: '#' + data.color }" />
+            </template>
+          </Column>
+          <Column header="Actions" style="width: 8rem">
+            <template #body="{ data }">
+              <div class="flex gap-2">
                 <Button icon="pi pi-pencil" size="small" text @click="openEdit('manufacturers', data)" />
                 <Button icon="pi pi-trash" size="small" text severity="danger" @click="confirmDelete('manufacturers', data.id, data.name)" />
-            </div>
+              </div>
             </template>
-        </Column>
+          </Column>
         </DataTable>
     </template>
     </Card>
@@ -259,6 +280,11 @@ onMounted(loadAll)
         <Column header="Manufacturer">
             <template #body="{ data }">{{ data.manufacturer?.name }}</template>
         </Column>
+        <Column header="Color" style="width: 5rem">
+        <template #body="{ data }">
+          <div v-if="data.color" class="w-6 h-6 rounded-full border" :style="{ backgroundColor: '#' + data.color }" />
+        </template>
+      </Column>
         <Column header="Actions" style="width: 8rem">
             <template #body="{ data }">
             <div class="flex gap-2">
@@ -267,6 +293,7 @@ onMounted(loadAll)
             </div>
             </template>
         </Column>
+        
         </DataTable>
     </template>
     </Card>
@@ -274,29 +301,34 @@ onMounted(loadAll)
 
 <!-- Shared dialog -->
 <Dialog v-model:visible="dialog" modal :header="dialogTitle" class="w-full max-w-md">
-    <div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-4">
     <div v-if="dialogType === 'models'" class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Manufacturer</label>
-        <Select
+      <label class="text-sm text-gray-700">Manufacturer</label>
+      <Select
         v-model="modelManufacturerId"
         :options="manufacturers"
         optionLabel="name"
         optionValue="id"
         placeholder="Select manufacturer"
         class="w-full"
-        />
+      />
     </div>
 
     <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">{{ dialogType === 'models' ? 'Model Name' : 'Name' }}</label>
-        <InputText v-model="nameInput" class="w-full" />
-    </div>
+      <label class="text-sm text-gray-700">{{ dialogType === 'models' ? 'Model Name' : 'Name' }}</label>
+      <InputText v-model="nameInput" class="w-full" />
     </div>
 
-    <div class="flex justify-end gap-2 mt-6">
+    <div class="flex flex-col gap-1">
+    <label class="text-sm text-gray-700">Tag Color</label>
+    <ColorPicker v-model="colorPick" :usedColors="usedColors" />
+  </div>
+  </div>
+
+  <div class="flex justify-end gap-2 mt-6">
     <Button label="Cancel" text @click="dialog = false" />
     <Button label="Save" @click="saveDialog" />
-    </div>
+  </div>
 </Dialog>
 </div>
 </template>

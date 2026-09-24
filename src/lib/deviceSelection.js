@@ -9,15 +9,15 @@ export async function fetchSelections(type) {
   return data
 }
 
-export async function createSelection(type, name) {
+export async function createSelection(type, name, color = null) {
   await getCsrfCookie()
-  const { data } = await api.post(`/api/device-selection/${type}`, { name })
+  const { data } = await api.post(`/api/device-selection/${type}`, { name, color })
   return data
 }
 
-export async function updateSelection(type, id, name) {
+export async function updateSelection(type, id, name, color = null) {
   await getCsrfCookie()
-  const { data } = await api.put(`/api/device-selection/${type}/${id}`, { name })
+  const { data } = await api.put(`/api/device-selection/${type}/${id}`, { name, color })
   return data
 }
 
@@ -34,15 +34,15 @@ export async function fetchModels(manufacturerId = null) {
   return data
 }
 
-export async function createModel(manufacturerId, name) {
+export async function createModel(manufacturerId, name, color = null) {
   await getCsrfCookie()
-  const { data } = await api.post('/api/device-models', { manufacturer_id: manufacturerId, name })
+  const { data } = await api.post('/api/device-models', { manufacturer_id: manufacturerId, name, color })
   return data
 }
 
-export async function updateModel(id, manufacturerId, name) {
+export async function updateModel(id, manufacturerId, name, color = null) {
   await getCsrfCookie()
-  const { data } = await api.put(`/api/device-models/${id}`, { manufacturer_id: manufacturerId, name })
+  const { data } = await api.put(`/api/device-models/${id}`, { manufacturer_id: manufacturerId, name, color })
   return data
 }
 

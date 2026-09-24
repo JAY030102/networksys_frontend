@@ -21,6 +21,12 @@ const routes = [
         meta: { title: 'Dashboard' },
       },
       {
+        path: 'devices',
+        name: 'devices',
+        component: () => import('@/views/Devices.vue'),
+        meta: { title: 'Devices' },
+      },
+      {
         path: 'superadmin/device-selections',
         name: 'device-selections',
         component: () => import('@/views/DeviceSelection.vue'),

@@ -1,8 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import Login from '@/views/Login.vue'
 import Register from '@/views/Register.vue'
 import SidebarMenu from '@/components/Menu.vue'
+const route = useRoute()
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -17,23 +18,31 @@ const routes = [
         path: 'dashboard',
         name: 'dashboard',
         component: () => import('@/views/Dashboard.vue'),
+        meta: { title: 'Dashboard' },
+      },
+      {
+        path: 'superadmin/device-selections',
+        name: 'device-selections',
+        component: () => import('@/views/DeviceSelection.vue'),
+        meta: { title: 'Device Selection', roles: ['superadmin'] },
       },
       {
         path: 'profile',
         name: 'profile',
         component: () => import('@/views/Profile.vue'),
+        meta: { title: 'My Profile' },
       },
       {
         path: 'superadmin/pending-approvals',
         name: 'pending-approvals',
         component: () => import('@/views/SuperAdmin/PendingApprovals.vue'),
-        meta: { roles: ['superadmin'] },
+        meta: { title: 'Pending Approvals' , roles: ['superadmin'] },
       },
       {
         path: 'superadmin/user-management',
         name: 'user-management',
         component: () => import('@/views/SuperAdmin/UserManagement.vue'),
-        meta: { roles: ['superadmin'] },
+        meta: { title: 'User Management' , roles: ['superadmin'] },
       },
     ],
   },

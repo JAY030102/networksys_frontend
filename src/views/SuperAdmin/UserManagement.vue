@@ -8,8 +8,10 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import Textarea from 'primevue/textarea'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
 
-
+const toast = useToast()
 const users = ref([])
 const archived = ref([])
 const loadingUsers = ref(true)
@@ -42,21 +44,32 @@ function openReasonDialog(user, action) {
 async function confirmAction() {
   if (!selectedUser.value || !reasonAction.value) return
 
-  if (reasonAction.value === 'suspend') {
-    await suspendUser(selectedUser.value.id, reasonText.value)
-    await loadUsers()
-  } else if (reasonAction.value === 'terminate') {
-    await terminateUser(selectedUser.value.id, reasonText.value)
-    await loadUsers()
-    await loadArchived()
+  try {
+    if (reasonAction.value === 'suspend') {
+      await suspendUser(selectedUser.value.id, reasonText.value)
+      await loadUsers()
+      toast.add({ severity: 'warn', summary: 'Suspended', detail: `${selectedUser.value.name} has been suspended.`, life: 3000 })
+    } else if (reasonAction.value === 'terminate') {
+      await terminateUser(selectedUser.value.id, reasonText.value)
+      await loadUsers()
+      await loadArchived()
+      toast.add({ severity: 'error', summary: 'Terminated', detail: `${selectedUser.value.name} has been terminated and archived.`, life: 3000 })
+    }
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Action failed.', life: 4000 })
   }
 
   reasonDialog.value = false
 }
 
 async function handleReactivate(user) {
-  await reactivateUser(user.id)
-  await loadUsers()
+  try {
+    await reactivateUser(user.id)
+    await loadUsers()
+    toast.add({ severity: 'success', summary: 'Reactivated', detail: `${user.name} has been reactivated.`, life: 3000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Reactivation failed.', life: 4000 })
+  }
 }
 
 onMounted(() => {
@@ -66,6 +79,7 @@ onMounted(() => {
 </script>
 <template>
   <div class="p-6 flex flex-col gap-6">
+    <Toast />
     <!-- Registered Users -->
     <Card>
       <template #title>Registered Users</template>

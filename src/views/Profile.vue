@@ -11,7 +11,10 @@ import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
 import Avatar from 'primevue/avatar'
 import Message from 'primevue/message'
-import Divider from 'primevue/divider'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
+
+const toast = useToast()
 
 const auth = useAuthStore()
 const fileInput = ref(null)
@@ -45,6 +48,8 @@ const passwordForm = ref({
   password_confirmation: '',
 })
 
+const avatarFile = ref(null)
+const avatarPreview = ref(null)
 const profileError = ref(null)
 const profileSuccess = ref(null)
 const passwordError = ref(null)
@@ -74,27 +79,34 @@ async function load() {
     address: user.address,
   }
 }
-
 async function handleProfileSave() {
   profileError.value = null
   profileSuccess.value = null
   savingProfile.value = true
   try {
+    if (avatarFile.value) {
+      const avatarRes = await updateAvatar(avatarFile.value)
+      auth.user = { ...auth.user, ...avatarRes.user, avatar_url: avatarRes.avatar_url }
+      avatarFile.value = null
+    }
+
     const payload = { ...form.value, birthdate: formatDate(form.value.birthdate) }
     const res = await updateProfile(payload)
     profileSuccess.value = res.message
-    auth.user = res.user
+    auth.user = { ...auth.user, ...res.user }
+
+    toast.add({ severity: 'success', summary: 'Profile Updated', detail: 'Your changes have been saved.', life: 3000 })
   } catch (e) {
-    profileError.value =
-      e.response?.data?.message ||
-      Object.values(e.response?.data?.errors || {})
-        .flat()
-        .join(' ') ||
-      'Update failed'
+    profileError.value = e.response?.data?.message
+      || Object.values(e.response?.data?.errors || {}).flat().join(' ')
+      || 'Update failed'
+
+    toast.add({ severity: 'error', summary: 'Error', detail: profileError.value, life: 4000 })
   } finally {
     savingProfile.value = false
   }
 }
+
 
 async function handlePasswordSave() {
   passwordError.value = null
@@ -104,54 +116,39 @@ async function handlePasswordSave() {
     const res = await updatePassword(passwordForm.value)
     passwordSuccess.value = res.message
     passwordForm.value = { current_password: '', password: '', password_confirmation: '' }
+
+    toast.add({ severity: 'success', summary: 'Password Updated', detail: 'Your password has been changed.', life: 3000 })
   } catch (e) {
-    passwordError.value =
-      e.response?.data?.message ||
-      Object.values(e.response?.data?.errors || {})
-        .flat()
-        .join(' ') ||
-      'Password update failed'
+    passwordError.value = e.response?.data?.message
+      || Object.values(e.response?.data?.errors || {}).flat().join(' ')
+      || 'Password update failed'
+
+    toast.add({ severity: 'error', summary: 'Error', detail: passwordError.value, life: 4000 })
   } finally {
     savingPassword.value = false
   }
 }
 
-async function handleAvatarChange(event) {
+function handleAvatarChange(event) {
   const file = event.target.files[0]
   if (!file) return
-  uploadingAvatar.value = true
-  try {
-    const res = await updateAvatar(file)
-    
-    // 1. Force image reload by appending a timestamp query string
-    const freshAvatarUrl = `${res.avatar_url}?t=${Date.now()}`
-    
-    // 2. Update auth user state with new timestamped URL
-    auth.user = { 
-      ...auth.user, 
-      ...res.user, 
-      avatar_url: freshAvatarUrl 
-    }
-  } catch (e) {
-    console.error('Avatar upload failed', e)
-  } finally {
-    uploadingAvatar.value = false
-  }
-
+  avatarFile.value = file
+  avatarPreview.value = URL.createObjectURL(file)
 }
+
+
+
 
 onMounted(load)
 </script>
 <template>
   <div class="p-6 max-w-6xl mx-auto">
+    <Toast />
     <h3 class="text-xl font-semibold text-gray-800 mb-6">User Profile</h3>
-    <div class="grid md:grid-cols-3 gap-6 items-start">
+    <div class="grid md:grid-cols-4 gap-6 items-start">
       <!-- Left: Profile form -->
-      <Card class="md:col-span-2">
+      <Card class="md:col-span-3">
         <template #content>
-          <Message v-if="profileError" severity="error" :closable="false" class="mb-4">{{ profileError }}</Message>
-          <Message v-if="profileSuccess" severity="success" :closable="false" class="mb-4">{{ profileSuccess }}</Message>
-
           <div class="flex items-center gap-3 mb-6">
             <Avatar size="xlarge" shape="circle">
               <img
@@ -175,21 +172,23 @@ onMounted(load)
           </div>
 
           <form @submit.prevent="handleProfileSave" class="flex flex-col gap-4">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
               <div class="flex flex-col gap-1">
-                <label class="text-sm text-gray-700">First name:</label>
+                <label class="text-sm text-gray-700">First Name:</label>
                 <InputText v-model="form.first_name" class="w-full" />
               </div>
+  
               <div class="flex flex-col gap-1">
-                <label class="text-sm text-gray-700">Last name:</label>
+                <label class="text-sm text-gray-700">Middle Name:</label>
+                <InputText v-model="form.middle_name" class="w-full" />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-sm text-gray-700">Last Name:</label>
                 <InputText v-model="form.last_name" class="w-full" />
               </div>
             </div>
 
-            <div class="flex flex-col gap-1">
-              <label class="text-sm text-gray-700">Middle name:</label>
-              <InputText v-model="form.middle_name" class="w-full" />
-            </div>
 
             <div class="flex flex-col gap-1">
               <label class="text-sm text-gray-700">Email:</label>
@@ -237,8 +236,6 @@ onMounted(load)
       <!-- Right: Password change -->
       <Card class="bg-yellow-50 border border-yellow-200">
         <template #content>
-          <Message v-if="passwordError" severity="error" :closable="false" class="mb-4">{{ passwordError }}</Message>
-          <Message v-if="passwordSuccess" severity="success" :closable="false" class="mb-4">{{ passwordSuccess }}</Message>
 
           <form @submit.prevent="handlePasswordSave" class="flex flex-col gap-4">
             <div class="flex flex-col gap-1">

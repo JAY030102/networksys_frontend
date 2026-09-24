@@ -6,6 +6,10 @@ import Column from 'primevue/column'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Card from 'primevue/card'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
+
+const toast = useToast()
 
 const users = ref([])
 const loading = ref(true)
@@ -17,13 +21,23 @@ async function load() {
 }
 
 async function handleApprove(id) {
-  await approveUser(id)
-  await load()
+  try {
+    await approveUser(id)
+    await load()
+    toast.add({ severity: 'success', summary: 'Approved', detail: 'User has been approved.', life: 3000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Approval failed.', life: 4000 })
+  }
 }
 
 async function handleReject(id) {
-  await rejectUser(id)
-  await load()
+  try {
+    await rejectUser(id)
+    await load()
+    toast.add({ severity: 'warn', summary: 'Rejected', detail: 'User has been rejected and archived.', life: 3000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Rejection failed.', life: 4000 })
+  }
 }
 
 onMounted(load)
@@ -31,6 +45,7 @@ onMounted(load)
 
 <template>
   <div class="p-6">
+    <Toast />
     <Card>
       <template #title>Pending User Approvals</template>
       <template #content>

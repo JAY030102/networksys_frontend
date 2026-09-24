@@ -6,6 +6,8 @@ import App from './App.vue'
 import router from './router'
 import 'primeicons/primeicons.css'
 import PrimeVue from 'primevue/config'
+import ConfirmationService from 'primevue/confirmationservice'
+import ToastService from 'primevue/toastservice'
 import light from '@/themes/light'
 
 const app = createApp(App)
@@ -26,3 +28,5 @@ app.use(PrimeVue, {
 })
 
 app.mount('#app')
+app.use(ConfirmationService)
+app.use(ToastService)

@@ -11,6 +11,10 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
+
+const toast = useToast()
 
 const router = useRouter()
 const error = ref(null)
@@ -58,17 +62,15 @@ async function handleRegister() {
   success.value = null
   loading.value = true
   try {
-    const payload = {
-      ...form.value,
-      birthdate: formatDate(form.value.birthdate),
-    }
-    const res = await register(payload)
+    const res = await register(form.value)
     success.value = res.message
+    toast.add({ severity: 'success', summary: 'Registered', detail: res.message, life: 3000 })
     setTimeout(() => router.push('/login'), 2000)
   } catch (e) {
     error.value = e.response?.data?.message
       || Object.values(e.response?.data?.errors || {}).flat().join(' ')
       || 'Registration failed'
+    toast.add({ severity: 'error', summary: 'Registration Failed', detail: error.value, life: 4000 })
   } finally {
     loading.value = false
   }
@@ -77,6 +79,7 @@ async function handleRegister() {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <Toast />
     <Card class="w-full max-w-4xl p-0! overflow-hidden rounded-2xl shadow-xl">
       <template #content>
         <div class="grid md:grid-cols-2">
@@ -97,10 +100,6 @@ async function handleRegister() {
           <!-- Right: form -->
           <div class="flex flex-col justify-center px-8 py-12 md:px-12 order-1 md:order-2 overflow-y-auto max-h-screen">
             <h1 class="text-2xl font-bold text-teal-600 text-center mb-6">Create Account</h1>
-
-            <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
-            <Message v-if="success" severity="success" :closable="false" class="mb-4">{{ success }}</Message>
-
             <form @submit.prevent="handleRegister" class="flex flex-col gap-4">
               <div class="grid grid-cols-2 gap-3">
                 <IconField>

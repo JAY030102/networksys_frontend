@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Checkbox from 'primevue/checkbox'
@@ -10,34 +10,49 @@ import Message from 'primevue/message'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Card  from 'primevue/card'
+import { useToast } from 'primevue/usetoast'
+import Toast from 'primevue/toast'
+
+const toast = useToast()
+
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
 const loginField = ref('')
 const password = ref('')
 const remember = ref(false)
 const error = ref(null)
 const loading = ref(false)
 
+const sessionExpired = ref(route.query.expired === '1')
+if (sessionExpired.value) {
+  router.replace({ path: '/login' }) 
+}
+
 async function handleLogin() {
   error.value = null
 
   if (!remember.value) {
     error.value = 'Please check "Remember me" to continue.'
+    toast.add({ severity: 'warn', summary: 'Required', detail: error.value, life: 3000 })
     return
   }
 
   if (password.value.length < 8) {
     error.value = 'Password must be at least 8 characters.'
+    toast.add({ severity: 'warn', summary: 'Invalid Password', detail: error.value, life: 3000 })
     return
   }
 
   loading.value = true
   try {
     await auth.login(loginField.value, password.value, remember.value)
+    toast.add({ severity: 'success', summary: 'Welcome back', detail: 'Logged in successfully.', life: 3000 })
     router.push('/dashboard')
   } catch (e) {
     error.value = e.response?.data?.message || 'Login failed'
+    toast.add({ severity: 'error', summary: 'Login Failed', detail: error.value, life: 4000 })
   } finally {
     loading.value = false
   }
@@ -46,6 +61,7 @@ async function handleLogin() {
 
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+    <Toast />
     <Card class="w-full max-w-4xl p-0! overflow-hidden rounded-2xl shadow-xl">
       <template #content>
         <div class="grid md:grid-cols-2">
@@ -53,8 +69,10 @@ async function handleLogin() {
           <div class="flex flex-col justify-center px-8 py-12 md:px-12">
             <h1 class="text-2xl font-bold text-teal-600 text-center mb-6">Sign in</h1>
 
-            <Message v-if="error" severity="error" :closable="false" class="mb-4">{{ error }}</Message>
-
+           
+            <Message v-if="sessionExpired" severity="warn" :closable="false" class="mb-4">
+              Your session has expired. Please sign in again.
+            </Message>
             <form @submit.prevent="handleLogin" class="flex flex-col gap-4">
               <IconField>
                 <InputIcon class="pi pi-envelope" />

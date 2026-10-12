@@ -45,7 +45,9 @@ const emptyForm = () => ({
   status: null,
   ip_address: '',
   property_no_or_serial_no: '',
+  par: '',
   sub_par: '',
+  it_asset_steward: '',
   mac_address: '',
   vlan: '',
   manufacturer: null,
@@ -285,7 +287,6 @@ onMounted(async () => {
 
           <Column field="device_name" header="Device Name" sortable frozen />
           <Column field="property_no_or_serial_no" header="Property No. / SN No." sortable  />
-          <Column field="sub_par" header="SUBPAR" sortable />
           <Column field="category" header="Category" sortable>
             <template #body="{ data }">
               <Tag
@@ -379,8 +380,18 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">PAR</label>
+          <InputText v-model="form.par" class="w-full" />
+        </div>
+
+        <div class="flex flex-col gap-1">
           <label class="text-sm text-gray-700">SUBPAR</label>
           <InputText v-model="form.sub_par" class="w-full" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">IT Asset Steward</label>
+          <InputText v-model="form.it_asset_steward" class="w-full" />
         </div>
 
         <div class="flex flex-col gap-1">

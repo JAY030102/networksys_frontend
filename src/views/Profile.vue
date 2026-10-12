@@ -173,6 +173,7 @@ onMounted(load)
 
           <form @submit.prevent="handleProfileSave" class="flex flex-col gap-4">
             <div class="grid grid-cols-3 gap-4">
+              
               <div class="flex flex-col gap-1">
                 <label class="text-sm text-gray-700">First Name:</label>
                 <InputText v-model="form.first_name" class="w-full" />

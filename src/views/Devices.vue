@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, computed  } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { fetchDevices, createDevice, updateDevice, deleteDevice } from '@/lib/devices'
 import { fetchSelections, fetchModels } from '@/lib/deviceSelection'
 import { fetchActiveUsers } from '@/lib/auth'
@@ -39,40 +39,53 @@ const dialogTitle = ref('')
 const editingId = ref(null)
 const saving = ref(false)
 
-
-
 const emptyForm = () => ({
-device_name: '', category: null, status: null,
-ip_address: '', mac_address: '', vlan: '',
-manufacturer: null, model: '', serial_number: '',
-location: '', rack: '', port: '', firmware: '',
-assigned_to: null, purchase_date: null, warranty_expiry: null,
-notes: '',
+  device_name: '',
+  category: null,
+  status: null,
+  ip_address: '',
+  property_no_or_serial_no: '',
+  sub_par: '',
+  mac_address: '',
+  vlan: '',
+  manufacturer: null,
+  model: '',
+  serial_number: '',
+  location: '',
+  rack: '',
+  port: '',
+  firmware: '',
+  assigned_to: null,
+  purchase_date: null,
+  warranty_expiry: null,
+  notes: '',
 })
 
 const form = ref(emptyForm())
 
 const filteredModels = computed(() => {
-if (!form.value.manufacturer) return []
-const manufacturerId = manufacturers.value.find(m => m.name === form.value.manufacturer)?.id
-return models.value.filter(m => m.manufacturer_id === manufacturerId)
+  if (!form.value.manufacturer) return []
+  const manufacturerId = manufacturers.value.find((m) => m.name === form.value.manufacturer)?.id
+  return models.value.filter((m) => m.manufacturer_id === manufacturerId)
 })
 
 function formatDate(date) {
-if (!date) return null
-const d = new Date(date)
-return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  if (!date) return null
+  const d = new Date(date)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 async function loadLookups() {
-categories.value = await fetchSelections('categories')
-statuses.value = await fetchSelections('statuses')
-manufacturers.value = await fetchSelections('manufacturers')
-models.value = await fetchModels()
-users.value = await fetchActiveUsers()
+  categories.value = await fetchSelections('categories')
+  statuses.value = await fetchSelections('statuses')
+  manufacturers.value = await fetchSelections('manufacturers')
+  models.value = await fetchModels()
+  users.value = await fetchActiveUsers()
 }
 
 const currentPage = ref(1)
+const sortField = ref('created_at')
+const sortOrder = ref(-1) // -1 = desc, 1 = asc
 let searchTimeout = null
 
 async function loadDevices() {
@@ -81,6 +94,8 @@ async function loadDevices() {
     const res = await fetchDevices({
       search: search.value.trim() || undefined,
       page: currentPage.value,
+      sort_field: sortField.value,
+      sort_order: sortOrder.value === 1 ? 'asc' : 'desc',
     })
     devices.value = res.data
     total.value = res.total
@@ -94,6 +109,13 @@ function onPage(event) {
   loadDevices()
 }
 
+function onSort(event) {
+  sortField.value = event.sortField
+  sortOrder.value = event.sortOrder
+  currentPage.value = 1
+  loadDevices()
+}
+
 watch(search, () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
@@ -103,268 +125,388 @@ watch(search, () => {
 })
 
 function openCreate() {
-dialogTitle.value = 'Add Device'
-editingId.value = null
-form.value = emptyForm()
-dialog.value = true
+  dialogTitle.value = 'Add Device'
+  editingId.value = null
+  form.value = emptyForm()
+  dialog.value = true
 }
 
 function openEdit(row) {
-dialogTitle.value = 'Edit Device'
-editingId.value = row.id
-form.value = {
-...row,
-assigned_to: row.assigned_to?.id ?? null,
-purchase_date: row.purchase_date ? new Date(row.purchase_date) : null,
-warranty_expiry: row.warranty_expiry ? new Date(row.warranty_expiry) : null,
-}
-dialog.value = true
+  dialogTitle.value = 'Edit Device'
+  editingId.value = row.id
+  form.value = {
+    ...row,
+    assigned_to: row.assigned_to?.id ?? null,
+    purchase_date: row.purchase_date ? new Date(row.purchase_date) : null,
+    warranty_expiry: row.warranty_expiry ? new Date(row.warranty_expiry) : null,
+  }
+  dialog.value = true
 }
 
 async function saveDevice() {
-saving.value = true
-try {
-const payload = {
-    ...form.value,
-    purchase_date: formatDate(form.value.purchase_date),
-    warranty_expiry: formatDate(form.value.warranty_expiry),
-}
+  saving.value = true
+  try {
+    const payload = {
+      ...form.value,
+      purchase_date: formatDate(form.value.purchase_date),
+      warranty_expiry: formatDate(form.value.warranty_expiry),
+    }
 
-if (editingId.value) {
-    await updateDevice(editingId.value, payload)
-    toast.add({ severity: 'success', summary: 'Updated', detail: 'Device updated successfully.', life: 3000 })
-} else {
-    await createDevice(payload)
-    toast.add({ severity: 'success', summary: 'Created', detail: 'Device added successfully.', life: 3000 })
-}
+    if (editingId.value) {
+      await updateDevice(editingId.value, payload)
+      toast.add({
+        severity: 'success',
+        summary: 'Updated',
+        detail: 'Device updated successfully.',
+        life: 3000,
+      })
+    } else {
+      await createDevice(payload)
+      toast.add({
+        severity: 'success',
+        summary: 'Created',
+        detail: 'Device added successfully.',
+        life: 3000,
+      })
+    }
 
-dialog.value = false
-await loadDevices()
-} catch (e) {
-const message = e.response?.data?.message
-    || Object.values(e.response?.data?.errors || {}).flat().join(' ')
-    || 'Save failed'
-toast.add({ severity: 'error', summary: 'Error', detail: message, life: 4000 })
-} finally {
-saving.value = false
-}
+    dialog.value = false
+    await loadDevices()
+  } catch (e) {
+    const message =
+      e.response?.data?.message ||
+      Object.values(e.response?.data?.errors || {})
+        .flat()
+        .join(' ') ||
+      'Save failed'
+    toast.add({ severity: 'error', summary: 'Error', detail: message, life: 4000 })
+  } finally {
+    saving.value = false
+  }
 }
 
 function confirmDelete(row) {
-confirm.require({
-message: `Are you sure you want to delete "${row.device_name}"? This cannot be undone.`,
-header: 'Confirm Deletion',
-icon: 'pi pi-exclamation-triangle',
-acceptClass: 'p-button-danger',
-accept: async () => {
-    try {
-    await deleteDevice(row.id)
-    toast.add({ severity: 'success', summary: 'Deleted', detail: 'Device removed successfully.', life: 3000 })
-    await loadDevices()
-    } catch (e) {
-    toast.add({ severity: 'error', summary: 'Error', detail: 'Failed to delete device.', life: 4000 })
-    }
-},
-})
+  confirm.require({
+    message: `Are you sure you want to delete "${row.device_name}"? This cannot be undone.`,
+    header: 'Confirm Deletion',
+    icon: 'pi pi-exclamation-triangle',
+    acceptClass: 'p-button-danger',
+    accept: async () => {
+      try {
+        await deleteDevice(row.id)
+        toast.add({
+          severity: 'success',
+          summary: 'Deleted',
+          detail: 'Device removed successfully.',
+          life: 3000,
+        })
+        await loadDevices()
+      } catch (e) {
+        toast.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: 'Failed to delete device.',
+          life: 4000,
+        })
+      }
+    },
+  })
 }
 
-function statusSeverity(status) {
-if (status === 'active') return 'success'
-if (status === 'maintenance') return 'warn'
-if (status === 'decommissioned') return 'danger'
-return 'info'
+function modelColor(name) {
+  const m = models.value.find((m) => m.name === name)
+  return m?.color
 }
-
 function categoryColor(name) {
-  return categories.value.find(c => c.name === name)?.color
+  return categories.value.find((c) => c.name === name)?.color
 }
 function statusColor(name) {
-  return statuses.value.find(s => s.name === name)?.color
+  return statuses.value.find((s) => s.name === name)?.color
 }
+function manufacturerColor(name) {
+  return manufacturers.value.find((m) => m.name === name)?.color
+}
+
 onMounted(async () => {
-await loadLookups()
-await loadDevices()
+  try {
+    await loadLookups()
+  } catch (e) {
+    console.error('Failed to load lookups', e)
+    toast.add({
+      severity: 'error',
+      summary: 'Error',
+      detail: 'Failed to load dropdown options.',
+      life: 4000,
+    })
+  }
+  await loadDevices()
 })
-
-
 </script>
 
 <template>
-<div class="p-6">
-<Toast />
-<ConfirmDialog />
+  <div class="p-6">
+    <Toast />
+    <ConfirmDialog />
 
-<Card>
-    <template #title>
-    <div class="flex items-center justify-between flex-wrap gap-3">
-        <span>Devices</span>
-        <div class="flex items-center gap-2">
-        <IconField>
-            <InputIcon class="pi pi-search" />
-            <InputText v-model="search" placeholder="Search devices..." />
-        </IconField>
-        <Button label="Add Device" icon="pi pi-plus" @click="openCreate" />
+    <Card>
+      <template #title>
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <span>Devices</span>
+          <div class="flex items-center gap-2">
+            <IconField>
+              <InputIcon class="pi pi-search" />
+              <InputText v-model="search" placeholder="Search devices..." />
+            </IconField>
+            <Button label="Add Device" icon="pi pi-plus" @click="openCreate" />
+          </div>
         </div>
-    </div>
-    </template>
+      </template>
 
-    <template #content>
-    <DataTable
-        :value="devices"
-        :loading="loading"
-        lazy
-        paginator
-        :rows="10"
-        :totalRecords="total"
-        dataKey="id"
-        stripedRows
-        scrollable
-        @page="onPage"
-    >
-        <template #empty>
-        <p class="text-gray-500 text-center py-4">No devices found.</p>
-        </template>
+      <template #content>
+        <DataTable
+          :value="devices"
+          lazy
+          paginator
+          :rows="10"
+          :totalRecords="total"
+          dataKey="id"
+          stripedRows
+          scrollable
+          removableSort
+          size="small"
+          :sortField="sortField"
+          :sortOrder="sortOrder"
+          @page="onPage"
+          @sort="onSort"
+        >
+          <template #empty>
+            <p class="text-gray-500 text-center py-4">No devices found.</p>
+          </template>
 
-        <Column field="device_name" header="Device Name" sortable frozen />
-        <Column field="category" header="Category" sortable>
-        <template #body="{ data }">
-            <Tag
-            :value="data.category"
-            :style="categoryColor(data.category) ? { backgroundColor: '#' + categoryColor(data.category), color: '#fff' } : {}"
-            />
-        </template>
-        </Column>
+          <Column field="device_name" header="Device Name" sortable frozen />
+          <Column field="property_no_or_serial_no" header="Property No. / SN No." sortable  />
+          <Column field="sub_par" header="SUBPAR" sortable />
+          <Column field="category" header="Category" sortable>
+            <template #body="{ data }">
+              <Tag
+                v-if="data.category"
+                :value="data.category"
+                class="text-xs"
+                :style="
+                  categoryColor(data.category)
+                    ? { backgroundColor: '#' + categoryColor(data.category), color: '#fff' }
+                    : {}
+                "
+              />
+            </template>
+          </Column>
 
-        <Column field="status" header="Status" sortable>
-        <template #body="{ data }">
-            <Tag
-            :value="data.status"
-            :style="statusColor(data.status) ? { backgroundColor: '#' + statusColor(data.status), color: '#fff' } : {}"
-            />
-        </template>
-        </Column>
-        <Column field="ip_address" header="IP Address" />
-        <Column field="mac_address" header="MAC Address" />
-        <Column field="manufacturer" header="Manufacturer" />
-        <Column field="model" header="Model" />
-        <Column field="location" header="Location" />
-        <Column header="Assigned To">
-        <template #body="{ data }">{{ data.assigned_to?.name || '—' }}</template>
-        </Column>
+          <Column field="status" header="Status" sortable>
+            <template #body="{ data }">
+              <Tag
+                v-if="data.status"
+                :value="data.status"
+                :style="
+                  statusColor(data.status)
+                    ? { backgroundColor: '#' + statusColor(data.status), color: '#fff' }
+                    : {}
+                "
+              />
+            </template>
+          </Column>
+          <Column field="ip_address" header="IP Address" sortable />
+          <Column field="mac_address" header="MAC Address" sortable />
+          <Column field="manufacturer" header="Manufacturer" sortable>
+            <template #body="{ data }">
+              <Tag
+                v-if="data.manufacturer"
+                :value="data.manufacturer"
+                :style="
+                  manufacturerColor(data.manufacturer)
+                    ? { backgroundColor: '#' + manufacturerColor(data.manufacturer), color: '#fff' }
+                    : {}
+                "
+              />
+            </template>
+          </Column>
+          <Column field="model" header="Model" sortable>
+            <template #body="{ data }">
+              <Tag
+                v-if="data.model"
+                :value="data.model"
+                :style="
+                  modelColor(data.model)
+                    ? { backgroundColor: '#' + modelColor(data.model), color: '#fff' }
+                    : {}
+                "
+              />
+            </template>
+          </Column>
+          <Column field="location" header="Location" sortable />
+          <Column header="Assigned To" >
+            <template #body="{ data }">{{ data.assigned_to?.name || '—' }}</template>
+          </Column>
 
-        <Column header="Actions" style="width: 8rem" frozen alignFrozen="right">
-        <template #body="{ data }">
-            <div class="flex gap-2">
-            <Button icon="pi pi-pencil" size="small" text @click="openEdit(data)" />
-            <Button icon="pi pi-trash" size="small" text severity="danger" @click="confirmDelete(data)" />
-            </div>
-        </template>
-        </Column>
-    </DataTable>
-    </template>
-</Card>
+          <Column header="Actions" style="width: 4rem" frozen alignFrozen="right">
+            <template #body="{ data }">
+              <div class="flex gap-2">
+                <Button icon="pi pi-pencil" size="small" text @click="openEdit(data)" />
+                <Button
+                  icon="pi pi-trash"
+                  size="small"
+                  text
+                  severity="danger"
+                  @click="confirmDelete(data)"
+                />
+              </div>
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </Card>
 
-<!-- Create/Edit Dialog -->
-<Dialog v-model:visible="dialog" modal :header="dialogTitle" class="w-full max-w-3xl">
-    <form @submit.prevent="saveDevice" class="grid md:grid-cols-2 gap-4">
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Device Name</label>
-        <InputText v-model="form.device_name" class="w-full" />
-    </div>
+    <!-- Create/Edit Dialog -->
+    <Dialog v-model:visible="dialog" modal :header="dialogTitle" class="w-full max-w-3xl">
+      <form @submit.prevent="saveDevice" class="grid md:grid-cols-2 gap-4">
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Device Name</label>
+          <InputText v-model="form.device_name" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Category</label>
-        <Select v-model="form.category" :options="categories" optionLabel="name" optionValue="name" placeholder="Select category" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Property No. / SN No.</label>
+          <InputText v-model="form.property_no_or_serial_no" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Status</label>
-        <Select v-model="form.status" :options="statuses" optionLabel="name" optionValue="name" placeholder="Select status" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">SUBPAR</label>
+          <InputText v-model="form.sub_par" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">IP Address</label>
-        <InputText v-model="form.ip_address" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Category</label>
+          <Select
+            v-model="form.category"
+            :options="categories"
+            optionLabel="name"
+            optionValue="name"
+            placeholder="Select category"
+            showClear
+            class="w-full"
+          />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">MAC Address</label>
-        <InputText v-model="form.mac_address" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Status</label>
+          <Select
+            v-model="form.status"
+            :options="statuses"
+            optionLabel="name"
+            optionValue="name"
+            placeholder="Select status"
+            class="w-full"
+          />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">VLAN</label>
-        <InputText v-model="form.vlan" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">IP Address</label>
+          <InputText v-model="form.ip_address" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Manufacturer</label>
-        <Select v-model="form.manufacturer" :options="manufacturers" optionLabel="name" optionValue="name" placeholder="Select manufacturer" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">MAC Address</label>
+          <InputText v-model="form.mac_address" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Model</label>
-        <Select
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">VLAN</label>
+          <InputText v-model="form.vlan" class="w-full" />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Manufacturer</label>
+          <Select
+            v-model="form.manufacturer"
+            :options="manufacturers"
+            optionLabel="name"
+            optionValue="name"
+            placeholder="Select manufacturer"
+            class="w-full"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Model</label>
+          <Select
             v-model="form.model"
             :options="filteredModels"
             optionLabel="name"
             optionValue="name"
             placeholder="Select manufacturer first"
             :disabled="!form.manufacturer"
+            showClear
             class="w-full"
-        />
-    </div>
+          />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Serial Number</label>
-        <InputText v-model="form.serial_number" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Serial Number</label>
+          <InputText v-model="form.serial_number" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Location</label>
-        <InputText v-model="form.location" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Location</label>
+          <InputText v-model="form.location" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Rack</label>
-        <InputText v-model="form.rack" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Rack</label>
+          <InputText v-model="form.rack" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Port</label>
-        <InputText v-model="form.port" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Port</label>
+          <InputText v-model="form.port" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Firmware</label>
-        <InputText v-model="form.firmware" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Firmware</label>
+          <InputText v-model="form.firmware" class="w-full" />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Assigned To</label>
-        <Select v-model="form.assigned_to" :options="users" optionLabel="name" optionValue="id" placeholder="Unassigned" showClear class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Assigned To</label>
+          <Select
+            v-model="form.assigned_to"
+            :options="users"
+            optionLabel="name"
+            optionValue="id"
+            placeholder="Unassigned"
+            showClear
+            class="w-full"
+          />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Purchase Date</label>
-        <DatePicker v-model="form.purchase_date" dateFormat="yy-mm-dd" fluid />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Purchase Date</label>
+          <DatePicker v-model="form.purchase_date" dateFormat="yy-mm-dd" fluid />
+        </div>
 
-    <div class="flex flex-col gap-1">
-        <label class="text-sm text-gray-700">Warranty Expiry</label>
-        <DatePicker v-model="form.warranty_expiry" dateFormat="yy-mm-dd" fluid />
-    </div>
+        <div class="flex flex-col gap-1">
+          <label class="text-sm text-gray-700">Warranty Expiry</label>
+          <DatePicker v-model="form.warranty_expiry" dateFormat="yy-mm-dd" fluid />
+        </div>
 
-    <div class="flex flex-col gap-1 md:col-span-2">
-        <label class="text-sm text-gray-700">Notes</label>
-        <Textarea v-model="form.notes" rows="3" class="w-full" />
-    </div>
+        <div class="flex flex-col gap-1 md:col-span-2">
+          <label class="text-sm text-gray-700">Notes</label>
+          <Textarea v-model="form.notes" rows="3" class="w-full" />
+        </div>
 
-    <div class="md:col-span-2 flex justify-end gap-2 mt-2">
-        <Button label="Cancel" text type="button" @click="dialog = false" />
-        <Button label="Save" type="submit" :loading="saving" />
-    </div>
-    </form>
-</Dialog>
-</div>
+        <div class="md:col-span-2 flex justify-end gap-2 mt-2">
+          <Button label="Cancel" text type="button" @click="dialog = false" />
+          <Button label="Save" type="submit" :loading="saving" />
+        </div>
+      </form>
+    </Dialog>
+  </div>
 </template>

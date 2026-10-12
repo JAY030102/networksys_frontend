@@ -28,7 +28,7 @@ defineProps({
         <i v-else class="pi pi-user"></i>
       </Avatar>
       <span class="inline-flex flex-col items-start overflow-hidden">
-        <span class="font-bold text-gray-800 truncate">{{ auth.user?.first_name}} {{ auth.user?.middle_name}}{{ auth.user?.last_name }}</span>
+        <span class="font-bold text-gray-800 truncate">{{ auth.user?.name}}</span>
         <span class="text-sm text-gray-500 capitalize">{{ auth.user?.role }}</span>
       </span>
     </div>

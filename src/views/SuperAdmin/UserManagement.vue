@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { fetchActiveUsers, fetchArchivedUsers, suspendUser, reactivateUser, terminateUser } from '@/lib/auth'
+import { useAuthStore } from '@/stores/auth'
+import { fetchActiveUsers, fetchArchivedUsers, suspendUser, reactivateUser, terminateUser, updateUserRole } from '@/lib/auth'
 import Card from 'primevue/card'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
@@ -10,8 +11,10 @@ import Dialog from 'primevue/dialog'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
+import  Select  from 'primevue/select'
 
 const toast = useToast()
+const auth = useAuthStore()
 const users = ref([])
 const archived = ref([])
 const loadingUsers = ref(true)
@@ -72,6 +75,21 @@ async function handleReactivate(user) {
   }
 }
 
+async function handleRoleChange(user, newRole) {
+  console.log('Changing role for', user.id, 'to', newRole)
+  if (user.id === auth.user?.id) {
+    toast.add({ severity: 'warn', summary: 'Not Allowed', detail: 'You cannot change your own role here.', life: 3000 })
+    return
+  }
+  try {
+    await updateUserRole(user.id, newRole)
+    await loadUsers()
+    toast.add({ severity: 'success', summary: 'Role Updated', detail: `${user.name} is now ${newRole}.`, life: 3000 })
+  } catch (e) {
+    toast.add({ severity: 'error', summary: 'Error', detail: e.response?.data?.message || 'Role update failed.', life: 4000 })
+  }
+}
+
 onMounted(() => {
   loadUsers()
   loadArchived()
@@ -93,9 +111,7 @@ onMounted(() => {
           <Column field="username" header="Username" sortable />
           <Column field="email" header="Email" sortable />
           <Column field="role" header="Role" sortable>
-            <template #body="{ data }">
-              <Tag :value="data.role" severity="info" class="capitalize" />
-            </template>
+            <Tag :value="data.role" severity="info" class="capitalize" />
           </Column>
           <Column field="account_status" header="Status" sortable>
             <template #body="{ data }">
@@ -116,7 +132,7 @@ onMounted(() => {
             </template>
           </Column>
           
-          <Column header="Actions" style="width: 16rem">
+          <Column header="Actions" style="width: 10rem">
             <template #body="{ data }">
               <div class="flex gap-2">
                 <Button
@@ -145,6 +161,25 @@ onMounted(() => {
               </div>
             </template>
           </Column>
+          <Column header="User Type" style="width: 10rem"> 
+          <template #body="{ data }">
+            <div class="flex items-center gap-2">
+              <Select
+                :modelValue="data.role"
+                :options="[
+                  { label: 'Admin', value: 'admin' },
+                  { label: 'Superadmin', value: 'superadmin' },
+                  { label: 'Staff', value: 'staff' },
+                ]"
+                optionLabel="label"
+                optionValue="value"
+                class="w-35"
+                @update:modelValue="(val) => handleRoleChange(data, val)"
+              />
+              
+            </div>
+          </template>
+        </Column>
         </DataTable>
       </template>
     </Card>

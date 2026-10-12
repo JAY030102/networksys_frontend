@@ -62,3 +62,9 @@ export async function reactivateUser(id) {
 export async function terminateUser(id, reason) {
   return post(`/api/admin/user-management/${id}/terminate`, { reason })
 }
+
+export async function updateUserRole(id, role) {
+  await getCsrfCookie()
+  const { data } = await api.put(`/api/admin/user-management/${id}/role`, { role })
+  return data
+}

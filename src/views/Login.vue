@@ -35,9 +35,9 @@ async function handleLogin() {
 
   if (!remember.value) {
     error.value = 'Please check "Remember me" to continue.'
-    toast.add({ severity: 'warn', summary: 'Required', detail: error.value, life: 3000 })
+    toast.add({ severity: 'warn', summary: 'Required', detail: error.value, life: 2000 })
     return
-  }
+}
 
   if (password.value.length < 8) {
     error.value = 'Password must be at least 8 characters.'

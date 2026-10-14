@@ -33,6 +33,7 @@ const statuses = ref([])
 const manufacturers = ref([])
 const models = ref([])
 const users = ref([])
+const configuration = ref([])
 
 const dialog = ref(false)
 const dialogTitle = ref('')
@@ -83,6 +84,12 @@ async function loadLookups() {
   manufacturers.value = await fetchSelections('manufacturers')
   models.value = await fetchModels()
   users.value = await fetchActiveUsers()
+  configuration.value = await fetchSelections('configuration')
+}
+
+function backupTag(count) {
+  const key = count > 0 ? 'backed_up' : 'not_backed_up'
+  return configuration.value.find((tag) => tag.key === key)
 }
 
 const currentPage = ref(1)
@@ -125,6 +132,10 @@ watch(search, () => {
     loadDevices()
   }, 400)
 })
+
+function formatDateTime(value) {
+  return value ? new Date(value).toLocaleString() : null
+}
 
 function openCreate() {
   dialogTitle.value = 'Add Device'
@@ -315,6 +326,28 @@ onMounted(async () => {
               />
             </template>
           </Column>
+
+          <Column field="running_configurations_count" header="Config Backup" sortable>
+            <template #body="{ data }">
+              <Tag
+                :value="backupTag(data.running_configurations_count)?.name || (data.running_configurations_count > 0 ? 'Backed up' : 'Not backed up')"
+                :severity="
+                  backupTag(data.running_configurations_count)?.color
+                    ? undefined
+                    : data.running_configurations_count > 0
+                      ? 'success'
+                      : 'danger'
+                "
+                :style="
+                  backupTag(data.running_configurations_count)?.color
+                    ? { backgroundColor: '#' + backupTag(data.running_configurations_count).color, color: '#fff' }
+                    : {}
+                "
+                class="text-xs"
+              />
+            </template>
+          </Column>
+
           <Column field="ip_address" header="IP Address" sortable />
           <Column field="mac_address" header="MAC Address" sortable />
           <Column field="manufacturer" header="Manufacturer" sortable>
@@ -344,9 +377,9 @@ onMounted(async () => {
             </template>
           </Column>
           <Column field="location" header="Location" sortable />
-          <Column header="Assigned To" >
+          <!-- <Column header="Assigned To" >
             <template #body="{ data }">{{ data.assigned_to?.name || '—' }}</template>
-          </Column>
+          </Column> -->
 
           <Column header="Actions" style="width: 4rem" frozen alignFrozen="right">
             <template #body="{ data }">

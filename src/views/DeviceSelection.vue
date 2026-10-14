@@ -14,14 +14,15 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import { useToast } from 'primevue/usetoast'
 import Toast from 'primevue/toast'
 import ColorPicker from '@/components/ColorPicker.vue'
+import Tag from 'primevue/tag'
 
 const colorPick = ref(null)
 const categories = ref([])
 const statuses = ref([])
 const manufacturers = ref([])
 const models = ref([])
-
-const loading = ref({ categories: true, statuses: true, manufacturers: true, models: true })
+const configurationTags = ref([])
+const loading = ref({ categories: true, statuses: true, manufacturers: true, models: true,  configurationTags: true })
 const error = ref('')
 
 async function loadAll() {
@@ -30,22 +31,28 @@ loading.value.categories = true
 loading.value.statuses = true
 loading.value.manufacturers = true
 loading.value.models = true
+loading.value.configurationTags = true
 try {
 categories.value = await fetchSelections('categories')
 statuses.value = await fetchSelections('statuses')
 manufacturers.value = await fetchSelections('manufacturers')
 models.value = await fetchModels()
+configurationTags.value = await fetchSelections('configuration')
+} catch (e) {
+  const message = e.response?.data?.message || 'Failed to load device selections.'
+  toast.add({ severity: 'error', summary: 'Error', detail: message, life: 4000 })
 } finally {
 loading.value.categories = false
 loading.value.statuses = false
 loading.value.manufacturers = false
 loading.value.models = false
+loading.value.configurationTags = false
 }
 }
 
 // --- generic dialog state for categories/statuses/manufacturers ---
 const dialog = ref(false)
-const dialogType = ref(null) // 'categories' | 'statuses' | 'manufacturers' | 'models'
+const dialogType = ref(null) // 'categories' | 'statuses' | 'manufacturers' | 'models' | 'configuration'
 const dialogTitle = ref('')
 const editingId = ref(null)
 const nameInput = ref('')
@@ -55,6 +62,7 @@ const typeMap = {
 categories: { list: categories, label: 'Category' },
 statuses: { list: statuses, label: 'Status' },
 manufacturers: { list: manufacturers, label: 'Manufacturer' },
+configuration: { list: configurationTags, label: 'Configuration Tag' },
 }
 
 const toast = useToast()
@@ -113,6 +121,7 @@ const usedColors = computed(() => [
   ...statuses.value.map(s => ({ name: s.name, color: s.color, type: 'Status' })),
   ...manufacturers.value.map(m => ({ name: m.name, color: m.color, type: 'Manufacturer' })),
   ...models.value.map(m => ({ name: m.name, color: m.color, type: 'Model' })),
+  ...configurationTags.value.map(c => ({ name: c.name, color: c.color, type: 'Configuration Tag' })),
 ])
 
 async function saveDialog() {
@@ -297,6 +306,40 @@ onMounted(loadAll)
         </DataTable>
     </template>
     </Card>
+
+    <!-- Backup Tags -->
+<Card>
+  <template #title>
+    <div class="flex items-center justify-between gap-3">
+      <span>Running Config Backup Tags</span>
+    </div>
+  </template>
+  <template #content>
+    <DataTable :value="configurationTags" :loading="loading.configurationTags" dataKey="id" stripedRows>
+      <template #empty><p class="text-gray-500 text-center py-4">No configuration tags yet.</p></template>
+      <Column header="Tag">
+        <template #body="{ data }">
+          <Tag
+            :value="data.name"
+            :style="data.color ? { backgroundColor: '#' + data.color, color: '#fff' } : {}"
+          />
+        </template>
+      </Column>
+      <Column header="Color" style="width: 5rem">
+        <template #body="{ data }">
+          <div v-if="data.color" class="w-6 h-6 rounded-full border" :style="{ backgroundColor: '#' + data.color }" />
+        </template>
+      </Column>
+      <Column header="Actions" style="width: 6rem">
+        <template #body="{ data }">
+          <div class="flex gap-2">
+            <Button icon="pi pi-pencil" size="small" text @click="openEdit('configuration', data)" />
+          </div>
+        </template>
+      </Column>
+    </DataTable>
+  </template>
+</Card>
 </div>
 
 <!-- Shared dialog -->

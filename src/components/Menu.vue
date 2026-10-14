@@ -35,17 +35,24 @@ const items = computed(() => [
         icon: 'pi pi-gauge',
         route: '/dashboard',
       },
-       {
+      {
         label: 'Devices',
         icon: 'pi pi-desktop',
         route: '/devices',
       },
+      {
+        label: 'Device Configurations',
+        icon: 'pi pi-file-edit',
+        route: '/device-running-configurations',
+      },
       ...(auth.user?.role === 'superadmin'
-        ? [{
-            label: 'Device Selections',
-            icon: 'pi pi-sliders-h',
-            route: '/superadmin/device-selections',
-          }]
+        ? [
+            {
+              label: 'Device Selections',
+              icon: 'pi pi-sliders-h',
+              route: '/superadmin/device-selections',
+            },
+          ]
         : []),
     ],
   },
@@ -53,24 +60,29 @@ const items = computed(() => [
     label: 'User Management',
     items: [
       ...(auth.user?.role === 'superadmin'
-        ? [{
-            label: 'Users',
-            icon: 'pi pi-users',
-            route: '/superadmin/user-management',
-          }]
+        ? [
+            {
+              label: 'Users',
+              icon: 'pi pi-users',
+              route: '/superadmin/user-management',
+            },
+          ]
         : []),
       ...(auth.user?.role === 'superadmin'
-        ? [{
-            label: 'Pending Approvals',
-            icon: 'pi pi-hourglass',
-            badge: pendingCount.value > 0 ? pendingCount.value : null,
-            route: '/superadmin/pending-approvals',
-          }]
-        : []),{
+        ? [
+            {
+              label: 'Pending Approvals',
+              icon: 'pi pi-hourglass',
+              badge: pendingCount.value > 0 ? pendingCount.value : null,
+              route: '/superadmin/pending-approvals',
+            },
+          ]
+        : []),
+      {
         label: 'User Profile',
         icon: 'pi pi-user',
         route: '/profile',
-      }
+      },
     ],
   },
 ])
@@ -81,8 +93,8 @@ onMounted(loadPendingCount)
 <template>
   <div class="min-h-screen flex bg-gray-50">
     <div class="w-64 shrink-0">
-      <Menu 
-        :model="items" 
+      <Menu
+        :model="items"
         class="w-64 h-screen rounded-none border-r border-y-0 border-l-0 flex flex-col py-0! overflow-hidden"
       >
         <template #start>
@@ -94,34 +106,36 @@ onMounted(loadPendingCount)
         </template>
 
         <template #submenulabel="{ item }">
-          <span class="text-teal-600 font-bold text-xs uppercase tracking-wide px-2">{{ item.label }}</span>
+          <span class="text-teal-600 font-bold text-xs uppercase tracking-wide px-2">{{
+            item.label
+          }}</span>
         </template>
 
         <template #item="{ item }">
-          <router-link 
-            v-if="item.route" 
-            v-slot="{ href, navigate, isActive }" 
-            :to="item.route" 
+          <router-link
+            v-if="item.route"
+            v-slot="{ href, navigate, isActive }"
+            :to="item.route"
             custom
           >
-            <a 
-              v-ripple 
+            <a
+              v-ripple
               :href="href"
               :class="[
                 'flex items-center gap-2 px-4 py-2.5 mx-2 rounded-lg transition-colors cursor-pointer',
-                isActive 
-                  ? 'bg-teal-600 text-white font-medium shadow-xs' 
-                  : 'text-gray-700 hover:bg-teal-50 hover:text-teal-700'
+                isActive
+                  ? 'bg-teal-600 text-white font-medium shadow-xs'
+                  : 'text-gray-700 hover:bg-teal-50 hover:text-teal-700',
               ]"
               @click="navigate"
             >
               <span :class="item.icon" />
               <span>{{ item.label }}</span>
-              <Badge 
-                v-if="item.badge" 
-                class="ml-auto" 
+              <Badge
+                v-if="item.badge"
+                class="ml-auto"
                 :severity="isActive ? 'secondary' : 'primary'"
-                :value="item.badge" 
+                :value="item.badge"
               />
             </a>
           </router-link>

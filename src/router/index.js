@@ -27,6 +27,12 @@ const routes = [
         meta: { title: 'Devices' },
       },
       {
+        path: 'device-running-configurations',
+        name: 'device-running-configurations',
+        component: () => import('@/views/DeviceRunningConfigurations.vue'),
+        meta: { title: 'Device Running Configurations' },
+      },
+      {
         path: 'superadmin/device-selections',
         name: 'device-selections',
         component: () => import('@/views/DeviceSelection.vue'),
